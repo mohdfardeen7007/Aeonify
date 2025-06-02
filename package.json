@@ -1,0 +1,27 @@
+{
+  "name": "aeonify",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/start.js"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "baileys": "^6.7.17",
+    "chalk": "^5.4.1",
+    "dotenv": "^16.5.0",
+    "jimp": "*",
+    "mongoose": "^8.15.1",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "pino": "^9.7.0",
+    "puppeteer": "^24.9.0",
+    "qrcode-terminal": "^0.12.0",
+    "qs": "^6.14.0"
+  }
+}
