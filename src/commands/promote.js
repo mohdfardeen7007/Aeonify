@@ -54,7 +54,7 @@ const promoteCommand = {
       if (!target) {
         console.log('No valid target found');
         return await client.sendMessage(jid, { 
-          text: "❌ *Usage:* !promote @user or reply to their message" 
+          text: "*Usage:* !promote @user or reply to their message" 
         });
       }
 
@@ -112,17 +112,17 @@ const promoteCommand = {
         if (error.message?.includes('not-authorized')) {
           console.log('Failed: Bot not authorized');
           await client.sendMessage(jid, { 
-            text: "❌ *Failed to promote user!* I don't have sufficient permissions to modify admin status." 
+            text: "*Failed to promote user!* I don't have sufficient permissions to modify admin status." 
           });
         } else if (error.message?.includes('not-a-participant')) {
           console.log('Failed: User not in group');
           await client.sendMessage(jid, { 
-            text: "❌ *Failed to promote user!* The user is no longer in the group." 
+            text: "*Failed to promote user!* The user is no longer in the group." 
           });
         } else {
           console.log('Failed: Unexpected error');
           await client.sendMessage(jid, { 
-            text: "❌ *Failed to promote user!* An unexpected error occurred." 
+            text: "*Failed to promote user!* An unexpected error occurred." 
           });
         }
       }
@@ -133,7 +133,7 @@ const promoteCommand = {
         stack: error.stack
       });
       await client.sendMessage(jid, { 
-        text: "❌ *An error occurred while processing the command!*" 
+        text: "*An error occurred while processing the command!*" 
       });
     }
   }

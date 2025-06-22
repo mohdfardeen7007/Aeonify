@@ -19,7 +19,7 @@ const ssCommand = {
       if (!args.length) {
         console.log('No URL provided');
         return await client.sendMessage(jid, { 
-          text: "❌ *Please provide a URL!*\nUsage: !ss <url>\nExample: !ss https://google.com" 
+          text: "*Please provide a URL!*\nUsage: !ss <url>\nExample: !ss https://google.com" 
         }, { quoted: message });
       }
 
@@ -27,7 +27,7 @@ const ssCommand = {
       if (!url.match(/^https?:\/\//i)) {
         console.log('Invalid URL format:', url);
         return await client.sendMessage(jid, { 
-          text: "❌ *Invalid URL format!*\nPlease provide a valid URL starting with http:// or https://" 
+          text: "*Invalid URL format!*\nPlease provide a valid URL starting with http:// or https://" 
         }, { quoted: message });
       }
 
@@ -99,19 +99,19 @@ const ssCommand = {
         // Handle specific errors
         if (error.message?.includes('net::ERR_CONNECTION_REFUSED')) {
           await client.sendMessage(jid, { 
-            text: "❌ *Connection refused!* The website might be down or blocking access." 
+            text: "*Connection refused!* The website might be down or blocking access." 
           }, { quoted: message });
         } else if (error.message?.includes('net::ERR_NAME_NOT_RESOLVED')) {
           await client.sendMessage(jid, { 
-            text: "❌ *Invalid domain!* Could not resolve the website address." 
+            text: "*Invalid domain!* Could not resolve the website address." 
           }, { quoted: message });
         } else if (error.message?.includes('net::ERR_CONNECTION_TIMED_OUT')) {
           await client.sendMessage(jid, { 
-            text: "❌ *Connection timed out!* The website took too long to respond." 
+            text: "*Connection timed out!* The website took too long to respond." 
           }, { quoted: message });
         } else {
           await client.sendMessage(jid, { 
-            text: "❌ *Failed to take screenshot!* The website might be blocking screenshots or is not accessible." 
+            text: "*Failed to take screenshot!* The website might be blocking screenshots or is not accessible." 
           }, { quoted: message });
         }
       }
@@ -122,7 +122,7 @@ const ssCommand = {
         stack: error.stack
       });
       await client.sendMessage(jid, { 
-        text: "❌ *An error occurred while processing the command!*" 
+        text: "*An error occurred while processing the command!*" 
       }, { quoted: message });
     }
   }

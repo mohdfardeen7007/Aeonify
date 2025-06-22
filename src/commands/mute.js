@@ -35,21 +35,21 @@ const muteCommand = {
       if (!isGroup) {
         console.log('Failed: Not a group chat');
         return await client.sendMessage(jid, { 
-          text: "❌ *This command only works in groups!*" 
+          text: "*This command only works in groups!*" 
         });
       }
 
       if (!isUserAdmin) {
         console.log('Failed: User not admin');
         return await client.sendMessage(jid, { 
-          text: "❌ *Only admins can mute the group!*" 
+          text: "*Only admins can mute the group!*" 
         });
       }
 
       if (!isBotAdminNow) {
         console.log('Failed: Bot not admin');
         return await client.sendMessage(jid, { 
-          text: "❌ *Make me admin first to mute the group!*" 
+          text: "*Make me admin first to mute the group!*" 
         });
       }
 
@@ -69,12 +69,12 @@ const muteCommand = {
         if (error.message?.includes('not-authorized')) {
           console.log('Failed: Bot not authorized');
           await client.sendMessage(jid, { 
-            text: "❌ *Failed to mute group!* I don't have sufficient permissions." 
+            text: "*Failed to mute group!* I don't have sufficient permissions." 
           });
         } else {
           console.log('Failed: Unexpected error');
           await client.sendMessage(jid, { 
-            text: "❌ *Failed to mute group!* An unexpected error occurred." 
+            text: "*Failed to mute group!* An unexpected error occurred." 
           });
         }
       }
@@ -85,7 +85,7 @@ const muteCommand = {
         stack: error.stack
       });
       await client.sendMessage(jid, { 
-        text: "❌ *An error occurred while processing the command!*" 
+        text: "*An error occurred while processing the command!*" 
       });
     }
   }

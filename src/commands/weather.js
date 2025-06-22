@@ -12,7 +12,7 @@ const weatherCommand = {
       const { client, jid, messages, args, reply } = context;
       
       if (!args.length) {
-        return await reply("❌ *Please provide a city name!*\nUsage: !weather <city>\nExample: !weather London");
+        return await reply("*Please provide a city name!*\nUsage: !weather <city>\nExample: !weather London");
       }
 
       const city = args.join(' ');
@@ -20,7 +20,7 @@ const weatherCommand = {
       
       if (!apiKey) {
         console.error('Weather API key not configured');
-        return await reply("❌ *Weather API key not configured!*\nPlease contact the bot owner.");
+        return await reply("*Weather API key not configured!*\nPlease contact the bot owner.");
       }
 
       const processingMsg = await client.sendMessage(jid, {
@@ -39,7 +39,7 @@ const weatherCommand = {
         }
 
         if (data.cod !== 200) {
-          return await reply(`❌ *City not found!*\nPlease check the city name and try again.\n\nError: ${data.message || 'Unknown error'}`);
+          return await reply(`*City not found!*\nPlease check the city name and try again.\n\nError: ${data.message || 'Unknown error'}`);
         }
 
         const weather = data.weather[0];

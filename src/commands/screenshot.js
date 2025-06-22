@@ -7,13 +7,13 @@ const screenshotCommand = {
 
   run: async ({ client, jid, reply, args }) => {
     if (!args.length) {
-      return reply("❌ *Please provide a URL!*\nUsage: !screenshot <url>");
+      return reply("*Please provide a URL!*\nUsage: !screenshot <url>");
     }
 
     try {
       const url = args[0];
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        return reply("❌ *Invalid URL!* Please provide a valid URL starting with http:// or https://");
+        return reply("*Invalid URL!* Please provide a valid URL starting with http:// or https://");
       }
 
       // Send processing message
@@ -22,7 +22,7 @@ const screenshotCommand = {
       // Use a screenshot service API
       const apiKey = process.env.SCREENSHOT_API_KEY;
       if (!apiKey) {
-        return reply("❌ *Screenshot API key not configured!*");
+        return reply("*Screenshot API key not configured!*");
       }
 
       const screenshotUrl = `https://api.screenshotmachine.com?key=${apiKey}&url=${encodeURIComponent(url)}&dimension=1024x768&device=desktop&format=jpg&cacheLimit=0`;
@@ -34,7 +34,7 @@ const screenshotCommand = {
       });
     } catch (error) {
       console.error('Screenshot command error:', error);
-      await reply("❌ *Failed to take screenshot!* Please check the URL and try again.");
+      await reply("*Failed to take screenshot!* Please check the URL and try again.");
     }
   }
 };

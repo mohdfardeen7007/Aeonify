@@ -11,7 +11,7 @@ import readline from "readline";
 import chalk from "chalk";
 import NodeCache from "node-cache";
 import qrcode from "qrcode-terminal";
-import { logger } from './logger.js';
+import { logger } from "logyo";
 import { handleMessage } from './handler.js';
 import fs from "fs";
 import path from "path";

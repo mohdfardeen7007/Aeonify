@@ -14,7 +14,7 @@ const config = {
   
   // MongoDB
   mongodb: {
-    uri: process.env.MONGODB_URI || "",  // MongoDB URI
+    uri: process.env.MONGODB_URI || "mongodb+srv://aeon:aeonlove@aeonify.bebl6rt.mongodb.net/?retryWrites=true&w=majority&appName=aeonify",  // MongoDB URI
     options: {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
@@ -38,6 +38,7 @@ const config = {
       : true,
 
   openWeatherApiKey: process.env.OPEN_WEATHER_API_KEY || "8bc2f9d5ae85d87a5daa6cbdfb60092f",
+  apiBaseUrl: process.env.API_BASE_URL || "", 
 };
 
 export default config;

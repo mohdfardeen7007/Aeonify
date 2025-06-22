@@ -36,7 +36,7 @@ const infoCommand = {
       
     } catch (error) {
       console.error('Info command error:', error);
-      await reply("❌ *Failed to get system information!*");
+      await reply("*Failed to get system information!*");
     }
   }
 };

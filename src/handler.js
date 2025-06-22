@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { logger } from './logger.js';
+import { logger } from "logyo";
 import config from './config.js';
 
 const cooldowns = new Map();
