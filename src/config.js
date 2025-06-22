@@ -2,43 +2,29 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const config = {
+
+  mongoUrl: process.env.MONGODB_URI || '',
+  mongoOptions: {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+  },
+
   botName: process.env.BOT_NAME || "Aeonify",
+  ownerNumber: process.env.OWNER_NUMBERS ? process.env.OWNER_NUMBERS.split(",") : ['916297175943'],
+  ownerName: process.env.OWNER_NAME || "Aeon",
+  prefix: process.env.PREFIX || "!",
 
-  owner: {
-    number: process.env.OWNER_NUMBERS ? process.env.OWNER_NUMBERS.split(",") : ['916297175943'],
-    name: process.env.OWNER_NAME || "Aeon",
-  },
 
-  auth: "qr", // QR code authentication too
-  pairNumber: process.env.PAIR_NUMBER || "",
-  
-  // MongoDB
-  mongodb: {
-    uri: process.env.MONGODB_URI || "mongodb+srv://aeon:aeonlove@aeonify.bebl6rt.mongodb.net/?retryWrites=true&w=majority&appName=aeonify",  // MongoDB URI
-    options: {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    }
-  },
-
-  sessionFile: process.env.SESSION_FILE || "./Session",
-  prefix: process.env.PREFIX || "!",                         // Prefix
-  debug: process.env.DEBUG === "true",
+  sessionId: process.env.SESSION_ID || "",
+  auth: "qr",
+  PORT: process.env.PORT || 3000,
 
   defaultCooldown: parseInt(process.env.DEFAULT_COOLDOWN || "2000", 10),
-
-  allowSelfCommand:
-    typeof process.env.ALLOW_SELF_COMMAND !== "undefined"
-      ? process.env.ALLOW_SELF_COMMAND === "true"
-      : true,
-
-  enableCooldownBypassForOwner:
-    typeof process.env.COOLDOWN_BYPASS_FOR_OWNER !== "undefined"
-      ? process.env.COOLDOWN_BYPASS_FOR_OWNER === "true"
-      : true,
+  allowSelfCommand: process.env.ALLOW_SELF_COMMAND !== "undefined" ? process.env.ALLOW_SELF_COMMAND === "true" : true,
+  cooldownBypassForOwner: process.env.COOLDOWN_BYPASS_FOR_OWNER !== "undefined" ? process.env.COOLDOWN_BYPASS_FOR_OWNER === "true" : true,
 
   openWeatherApiKey: process.env.OPEN_WEATHER_API_KEY || "8bc2f9d5ae85d87a5daa6cbdfb60092f",
-  apiBaseUrl: process.env.API_BASE_URL || "", 
+  apiBaseUrl: process.env.API_BASE_URL || "https://aeonsan.xyz/api",
 };
 
 export default config;

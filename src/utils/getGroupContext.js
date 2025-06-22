@@ -1,6 +1,6 @@
-export async function getGroupContext({ client, from, senderId }) {
+export async function getGroupContext({ Aeonify, from, senderId }) {
   try {
-    const groupMetadata = await client.groupMetadata(from);
+    const groupMetadata = await Aeonify.groupMetadata(from);
     const participants = groupMetadata.participants || [];
 
     const adminSet = new Set(
@@ -9,12 +9,11 @@ export async function getGroupContext({ client, from, senderId }) {
 
     const owner = groupMetadata.owner?.toLowerCase() || null;
 
-    // Add owner explicitly as admin
     if (owner) adminSet.add(owner);
 
     return {
       isSenderAdmin: adminSet.has(senderId.toLowerCase()),
-      isBotAdmin: adminSet.has(client.user.id.toLowerCase()),
+      isBotAdmin: adminSet.has(Aeonify.user.id.toLowerCase()),
       groupOwner: owner,
       groupAdminSet: adminSet,
       groupMetadata,

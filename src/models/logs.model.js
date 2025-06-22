@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const LogSchema = new mongoose.Schema({
+  sessionId: { type: String, required: true },
   timestamp: {
     type: Date,
     default: Date.now
@@ -15,7 +16,7 @@ const LogSchema = new mongoose.Schema({
     required: true
   },
   data: {
-    type: mongoose.Schema.Types.Mixed, // Flexible payload: userId, commandName, args, etc.
+    type: mongoose.Schema.Types.Mixed,
     default: {}
   },
   pid: {
@@ -24,4 +25,13 @@ const LogSchema = new mongoose.Schema({
   }
 });
 
-export default mongoose.model('Log', LogSchema);
+LogSchema.index({ sessionId: 1, timestamp: -1 });
+LogSchema.pre('save', function(next) {
+  if (!this.sessionId) {
+    next(new Error('sessionId is required for Log documents. Always set sessionId explicitly.'));
+  } else {
+    next();
+  }
+});
+
+export default mongoose.model('Log', LogSchema); 

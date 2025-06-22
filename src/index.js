@@ -3,8 +3,6 @@ import {
   makeWASocket,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-  useMultiFileAuthState,
 } from "baileys";
 import pino from "pino";
 import readline from "readline";
@@ -12,10 +10,12 @@ import chalk from "chalk";
 import NodeCache from "node-cache";
 import qrcode from "qrcode-terminal";
 import { logger } from "logyo";
-import { handleMessage } from './handler.js';
-import fs from "fs";
-import path from "path";
-import MongoStore from './utils/mongoStore.js';
+import handleMessage from "./handler.js";
+import { useMongoAuthState } from '../Auth/mongoAuthState.js';
+import { startWebServer } from "./functions/webServer.js";
+import { initializeStatusMode } from "./commands/Owner/botProfile.js";
+import { formatUptime, startStatusUpdater, getCurrentStatus } from "./functions/status.js";
+import { startBirthdayScheduler } from "./functions/birthdayScheduler.js";
 
 const msgRetryCounterCache = new NodeCache();
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -24,7 +24,6 @@ const question = (text) => new Promise((resolve) => rl.closed ? resolve("") : rl
 let store = null;
 let phoneNumber = null;
 let countryCode = null;
-const mongoStore = new MongoStore();
 
 const DISCONNECT_REASONS = {
   [DisconnectReason.connectionClosed]: "Connection closed",
@@ -37,122 +36,51 @@ const DISCONNECT_REASONS = {
   515: "Connection closed by server"
 };
 
-// Function to check if session exists and is valid
-function checkSessionExists(sessionPath) {
-  try {
-    const credsPath = path.join(sessionPath, 'creds.json');
-    return fs.existsSync(credsPath) && fs.existsSync(sessionPath);
-  } catch (error) {
-    return false;
-  }
-}
+let qrCodeToSend = null;
+let sessionVerified = false;
+let webServerStarted = false;
 
-function isSessionValid(sessionPath) {
+export async function startAeonify() {
   try {
-    const credsPath = path.join(sessionPath, 'creds.json');
-    if (!fs.existsSync(credsPath)) return false;
-    
-    const credsData = fs.readFileSync(credsPath, 'utf8');
-    const creds = JSON.parse(credsData);
-    
-    // Check if essential credentials exist
-    return !!(creds.noiseKey && creds.signedIdentityKey && creds.signedPreKey && creds.registrationId);
-  } catch (error) {
-    console.log(chalk.red('Session validation error:', error.message));
-    return false;
-  }
-}
+    console.log(chalk.cyan("=========================="));
+    console.log(chalk.cyan("🤖 Bot Startup Initiated"));
+    console.log(chalk.cyan(`📱 Bot Name: ${config.botName}`));
+    console.log(chalk.cyan(`🔑 Auth Method: ${config.auth}`));
+    console.log(chalk.cyan(`🆔 Session ID: ${config.sessionId}`));
+    console.log(chalk.cyan("=========================="));
 
-
-function deleteSession(sessionPath) {
-  try {
-    if (fs.existsSync(sessionPath)) {
-      fs.rmSync(sessionPath, { recursive: true, force: true });
-      console.log(chalk.yellow(`Deleted session folder: ${sessionPath}`));
-    }
-  } catch (error) {
-    console.error(chalk.red('Error deleting session:', error));
-  }
-}
-
-export async function startCoffee() {
-  try {
-    if (!config.auth || !config.sessionFile) {
+    if (!config.auth) {
       console.log(chalk.red("Invalid config in settings.js!"));
       process.exit(1);
     }
 
-    // Initialize MongoDB connection
-    await mongoStore.init();
-
-    const usePairingCode = config.auth.toLowerCase() === "pair";
     const useQR = config.auth.toLowerCase() === "qr";
-    
-    // Check if session exists and is valid
-    const sessionExists = checkSessionExists(config.sessionFile);
-    const sessionValid = sessionExists && isSessionValid(config.sessionFile);
-    
-    console.log(chalk.blue(`Session Path: ${config.sessionFile}`));
+    if (!useQR) {
+      console.log(chalk.red("Invalid auth method in config! Only 'qr' is supported now."));
+      process.exit(1);
+    }
+
+    console.log(chalk.cyan("📡 Connecting to MongoDB..."));
+    const { state, saveCreds } = await useMongoAuthState(config.sessionId);
+    console.log(chalk.green("✅ MongoDB Connected Successfully"));
+
+    await initializeStatusMode();
+
+    const sessionExists = state.creds && Object.keys(state.creds).length > 0;
+    const sessionValid = sessionExists && state.creds.me && state.creds.me.id;
+
+    console.log(chalk.blue(`Session ID: ${config.sessionId}`));
     console.log(chalk.blue(`Session Exists: ${sessionExists}`));
     console.log(chalk.blue(`Session Valid: ${sessionValid}`));
 
-    // Only ask for authentication if no valid session exists
     let needsAuth = !sessionValid;
-
-    if (usePairingCode && needsAuth) {
-      console.log(chalk.yellow("No valid session found. Setting up new authentication..."));
-      
-      // First check environment variable for pair number
-      const pairNumber = process.env.PAIR_NUMBER || "";
-      
-      if (pairNumber && pairNumber.trim() && pairNumber.length > 6) {
-        phoneNumber = pairNumber.startsWith('+') ? pairNumber : `+${pairNumber}`;
-        console.log(chalk.green(`Using pair number from environment variable: ${phoneNumber}`));
-      }
-      // Then check if bot number is configured in config file
-      else if (config.pairNumber && config.pairNumber.trim() && config.pairNumber.length > 6) {
-        phoneNumber = config.pairNumber.startsWith('+') ? config.pairNumber : `+${config.pairNumber}`;
-        console.log(chalk.green(`Using configured bot number from config: ${phoneNumber}`));
-      }
-      
-      // If no valid phoneNumber found in environment or config, ask user for input
-      if (!phoneNumber) {
-        console.log(chalk.cyan("No bot number found in environment variable or config. Please enter your bot details:"));
-        
-        for (let i = 0; i < 3; i++) {
-          let cc = await question(chalk.cyan("Enter your country code (e.g., 91 for India): "));
-          cc = cc.trim().replace(/\D/g, "");
-          if (!cc || cc.length < 1 || cc.length > 4) {
-            console.log(chalk.redBright("Invalid country code! Try again."));
-            continue;
-          }
-          countryCode = cc;
-
-          let pn = await question(chalk.cyan("Enter your phone number (without country code): "));
-          pn = pn.trim().replace(/\D/g, "");
-          if (!pn || pn.length < 6 || pn.length > 15) {
-            console.log(chalk.redBright("Invalid phone number! Try again."));
-            continue;
-          }
-
-          phoneNumber = `+${cc}${pn}`;
-          console.log(chalk.green(`Phone number set: ${phoneNumber}`));
-          
-          // Ask user if they want to save this number in config for future use
-          const saveChoice = await question(chalk.yellow("Do you want to save this number in config for future use? (y/n): "));
-          if (saveChoice.toLowerCase() === 'y' || saveChoice.toLowerCase() === 'yes') {
-            console.log(chalk.blue(`Add this line to your config.js file:`));
-            console.log(chalk.white(`pairNumber: "${phoneNumber}",`));
-            console.log(chalk.blue(`Or set environment variable:`));
-            console.log(chalk.white(`PAIR_NUMBER="${phoneNumber}"`));
-          }
-          break;
-        }
-
-        if (!phoneNumber) {
-          console.log(chalk.redBright("Tried 3 times, exiting!"));
-          process.exit(1);
-        }
+    let webServer = null;
+    let io = null;
+    if (needsAuth) {
+      webServer = startWebServer();
+      while (!webServer.sessionVerified) {
+        console.log("Waiting for session verification via web page...");
+        await new Promise(r => setTimeout(r, 1000));
       }
     } else if (sessionValid) {
       console.log(chalk.green("Valid session found! Using existing session..."));
@@ -160,47 +88,89 @@ export async function startCoffee() {
 
     if (!rl.closed) rl.close();
 
-    const { state, saveCreds } = await useMultiFileAuthState(config.sessionFile);
-    store = makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" }));
-
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log(`Using WhatsApp v${version.join(".")}, isLatest: ${isLatest}`);
 
-    const coffee = makeWASocket({
+    const Aeonify = makeWASocket({
       version,
       logger: pino({ level: "silent" }),
-      auth: { creds: state.creds, keys: store },
+      auth: { creds: state.creds, keys: state.keys },
       msgRetryCounterCache,
     });
 
-    // Save credentials to both local file and MongoDB
-    coffee.ev.on("creds.update", async (creds) => {
+    Aeonify.ev.on("creds.update", async () => {
       await saveCreds();
-      await mongoStore.saveSession({ creds });
     });
 
-    // Only request pairing code if session is invalid and authentication is needed
-    if (usePairingCode && needsAuth && !coffee.authState.creds.registered) {
-      const cleanedNumber = phoneNumber.replace(/[^0-9]/g, "");
-      setTimeout(async () => {
-        try {
-          const code = await coffee.requestPairingCode(cleanedNumber);
-          const formattedCode = code.match(/.{1,4}/g)?.join("-") || code;
-          console.log(chalk.greenBright("Your pairing code: "), formattedCode);
-        } catch (error) {
-          console.error(chalk.red("Error generating pairing code:", error));
-        }
-      }, 3000);
-    }
+    Aeonify.ev.on("messages.upsert", async (m) => {
+      const message = m.messages[0];
+      if (!message || !message.message) return;
 
-    coffee.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-      // Show QR code only if session doesn't exist and QR mode is enabled
+      const isSelf = message.key.fromMe === true;
+
+      process.nextTick(async () => {
+        try {
+          await handleMessage(Aeonify, message, isSelf);
+        } catch (err) {
+          console.error(chalk.red("Error in handler:"), err);
+        }
+      });
+    });
+
+    let pairingCodeGenerated = false;
+
+    Aeonify.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr && useQR && needsAuth) {
-        console.log(chalk.green("Scan this QR code in WhatsApp:"));
+        if (webServer) webServer.setQR(qr);
+        console.log(chalk.green("Scan this QR code in WhatsApp (Terminal):"));
         qrcode.generate(qr, { small: true });
       }
 
-      if (connection === "close") {
+      if (connection === "open") {
+        const userName = Aeonify.user?.name || config.botName;
+        const ownNumber = Aeonify.user?.id?.split(":")[0] || "unknown";
+
+        console.log(chalk.green("=========================="));
+        console.log(chalk.green("✅ Bot Connected Successfully"));
+        console.log(chalk.cyan("• User Info"));
+        console.log(chalk.cyan(`- Name: ${userName}`));
+        console.log(chalk.cyan(`- Number: ${ownNumber}`));
+        console.log(chalk.cyan(`- Status: Connected`));
+        console.log(chalk.green(`- Session: ${sessionValid ? 'Existing' : 'New'}`));
+        console.log(chalk.green("=========================="));
+
+        if (webServer) webServer.close();
+        if (io) io.close();
+
+        try {
+          if (!global.startTime) {
+            global.startTime = Date.now();
+          }
+          const statusMode = global.statusMode || "uptime";
+          const uptime = Date.now() - global.startTime;
+          const uptimeStr = formatUptime(uptime);
+          const currentStatus = getCurrentStatus();
+
+          let ownerJids = [];
+          if (Array.isArray(config.ownerNumber)) {
+            ownerJids = config.ownerNumber.map(num => num.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
+          } else if (typeof config.ownerNumber === "string") {
+            ownerJids = [config.ownerNumber.replace(/[^0-9]/g, "") + "@s.whatsapp.net"];
+          }
+
+          for (const ownerJid of ownerJids) {
+            if (ownerJid) {
+              await Aeonify.sendMessage(ownerJid, {
+                text: `*Aeonify Bot Started!*\n*Current Status Mode:* ${statusMode}\n*Uptime:* ${uptimeStr}\n*Current Status:* ${currentStatus || 'No status set.'}`
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to send about message to owner:", err);
+        }
+        startStatusUpdater(Aeonify);
+        startBirthdayScheduler(Aeonify);
+      } else if (connection === "close") {
         const reason = lastDisconnect?.error?.output?.statusCode || 0;
         const retryReasons = [
           DisconnectReason.connectionClosed,
@@ -211,66 +181,90 @@ export async function startCoffee() {
         ];
 
         if (reason === DisconnectReason.badSession) {
-          console.log(chalk.red("Session corrupted, deleting session folder..."));
-          deleteSession(config.sessionFile);
-          await mongoStore.deleteSession();
-          console.log(chalk.yellow("Please restart the bot to create a new session!"));
+          console.log(chalk.red("Session corrupted, please restart the bot!"));
           process.exit(1);
         } else if (reason === DisconnectReason.connectionReplaced) {
           console.log(chalk.red("New session opened elsewhere. Close it first!"));
           process.exit(1);
         } else if (reason === DisconnectReason.loggedOut) {
-          console.log(chalk.red("Device logged out. Deleting session..."));
-          deleteSession(config.sessionFile);
-          await mongoStore.deleteSession();
-          phoneNumber = null;
-          console.log(chalk.yellow("Please restart the bot to re-authenticate!"));
+          console.log(chalk.red("Device logged out. Please restart the bot to re-authenticate!"));
           process.exit(1);
         } else if (retryReasons.includes(reason)) {
           console.log(chalk.yellow(`Connection closed, retrying in 5 seconds...`));
-          setTimeout(() => startCoffee(), 5000);
+          setTimeout(() => startAeonify(), 5000);
           return;
         } else {
           console.log(chalk.red(`Unknown disconnect reason: ${reason}`));
         }
 
+        const disconnectReason = DISCONNECT_REASONS[reason] || 'Unknown reason';
+
+        console.log(chalk.red("=========================="));
+        console.log(chalk.red("Bot Disconnected"));
+        console.log(chalk.red(`Reason: ${disconnectReason}`));
+        console.log(chalk.red(`Status Code: ${reason}`));
+        console.log(chalk.red("=========================="));
+
         process.exit(1);
-      } else if (connection === "open") {
-        const userName = coffee.user?.name || config.botName;
-        const ownNumber = coffee.user?.id?.split(":")[0] || "unknown";
-
-        console.log("==========================");
-        console.log(chalk.cyan("• User Info"));
-        console.log(chalk.cyan(`- Name: ${userName}`));
-        console.log(chalk.cyan(`- Number: ${ownNumber}`));
-        console.log(chalk.cyan(`- Status: Connected`));
-        console.log(chalk.green(`- Session: ${sessionValid ? 'Existing' : 'New'}`));
-        console.log("==========================");
-
-        const botInfo = {
-          version: '1.0.0',
-          commandCount: 25,
-        }
-        logger.logStartup(botInfo);
-
-        coffee.ev.on("messages.upsert", async (m) => {
-          const message = m.messages[0];
-          if (!message.message || message.key.fromMe) return;
-
-          try {
-            await handleMessage(coffee, message);
-          } catch (err) {
-            console.error(chalk.red("Error in handler:"), err);
-          }
-        });
       }
     });
-  } catch (err) {
-    console.error(chalk.red("Something went wrong in startCoffee():"), err);
-    if (!rl.closed) rl.close();
+
+    Aeonify.ev.on('groups.update', async (updates) => {
+      try {
+        if (!updates || !Array.isArray(updates) || updates.length === 0) {
+          return;
+        }
+
+        const update = updates[0];
+        if (!update.id) return;
+        let groupPp;
+        try {
+          groupPp = await Aeonify.profilePictureUrl(update.id, 'image');
+        } catch {
+          groupPp = 'https://images2.alphacoders.com/882/882819.jpg';
+        }
+
+        const wm = { url: groupPp };
+        if (update.announce !== undefined) {
+          const message = update.announce
+            ? 'Group has been *Closed!* Only *Admins* can send Messages!'
+            : 'Group has been *Opened!* Now *Everyone* can send Messages!';
+
+          await Aeonify.sendMessage(update.id, {
+            image: wm,
+            caption: message
+          });
+        }
+        else if (update.restrict !== undefined) {
+          const message = update.restrict
+            ? 'Group Info modification has been *Restricted*, Now only *Admins* can edit Group Info!'
+            : 'Group Info modification has been *Un-Restricted*, Now *Everyone* can edit Group Info!';
+
+          await Aeonify.sendMessage(update.id, {
+            image: wm,
+            caption: message
+          });
+        }
+        else if (update.subject) {
+          const message = `Group Subject has been updated To:\n\n*${update.subject}*`;
+          await Aeonify.sendMessage(update.id, {
+            image: wm,
+            caption: message
+          });
+        }
+      } catch (error) {
+        logger.logError(error, { context: 'Group Update Handler' });
+        console.error(chalk.red("Error in group update:"), error);
+      }
+    });
+
+  } catch (error) {
+    console.log(chalk.red("=========================="));
+    console.log(chalk.red("Error Starting Bot"));
+    console.log(chalk.red(`Error: ${error.message}`));
+    console.log(chalk.red("=========================="));
     process.exit(1);
   }
 }
 
-// Export the function as default as well for flexibility
-export default startCoffee;
+export default startAeonify;
