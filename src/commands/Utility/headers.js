@@ -10,49 +10,69 @@ const headersCommand = {
   minArgs: 1,
   requiredArgs: [{ name: "url", required: true }],
 
-  run: async ({ Aeonify, from, args, message, react, utils, senderName }) => {
+  run: async ({ Aeonify, jid, args, message, react, utils, senderName }) => {
+    let processingMsg = null;
     try {
       let url = args[0];
-      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      if (!/^https?:\/\//i.test(url)) {
         url = "https://" + url;
       }
 
+      // Validate URL
       try {
         new URL(url);
       } catch (e) {
-      return await Aeonify.sendMessage(from, {
+        await react("❌");
+        return Aeonify.sendMessage(jid, {
           text: "❗ Invalid URL format. Please provide a valid URL.",
-      }, { quoted: message });
-    }
+        }, { quoted: message });
+      }
 
       await react("🔍");
 
-      const processingMsg = await Aeonify.sendMessage(from, {
+      processingMsg = await Aeonify.sendMessage(jid, {
         text: `*Fetching headers for:*\n${url}\n*This may take a moment...*`
       }, { quoted: message });
 
-      const response = await axios.head(url, { 
-        timeout: 10000,
-        maxRedirects: 5,
-        validateStatus: (status) => status < 500
-      });
+      let response;
+      try {
+        response = await axios.head(url, { 
+          timeout: 10000,
+          maxRedirects: 5,
+          validateStatus: (status) => status < 500
+        });
+      } catch (error) {
+        // If HEAD fails, try GET (some servers don't support HEAD)
+        if (error.response && error.response.status === 405) {
+          response = await axios.get(url, { 
+            timeout: 10000,
+            maxRedirects: 5,
+            validateStatus: (status) => status < 500
+          });
+        } else {
+          throw error;
+        }
+      }
 
       const headers = response.headers;
-      const formattedHeaders = Object.entries(headers)
+      const formattedHeaders = Object.entries(headers || {})
         .map(([key, val]) => `• *${key}*: ${val}`)
-        .join("\n");
+        .join("\n") || "_No headers found._";
 
       const replyText = `📡 *HTTP Headers for:*\n${url}\n\n*Status:* ${response.status} ${response.statusText}\n\n${formattedHeaders}`;
 
-      await Aeonify.sendMessage(from, {
-        delete: processingMsg.key
-      });
+      if (processingMsg) {
+        await Aeonify.sendMessage(jid, { delete: processingMsg.key });
+      }
 
       await react("✨");
-      return await Aeonify.sendMessage(from, { text: replyText }, { quoted: message });
+      return Aeonify.sendMessage(jid, { text: replyText }, { quoted: message });
 
     } catch (error) {
       await react("❌");
+      if (processingMsg) {
+        await Aeonify.sendMessage(jid, { delete: processingMsg.key });
+      }
 
       console.error("Headers command error:", {
         error: error.message,
@@ -74,11 +94,13 @@ const headersCommand = {
         errorMsg += "Cannot connect to the server. Please check the URL and try again.";
       } else if (error.code === 'ERR_TLS_CERT_ALTNAME_INVALID') {
         errorMsg += "SSL/TLS certificate error. The website's security certificate is invalid.";
+      } else if (error.response?.status === 405) {
+        errorMsg += "The server does not support HEAD requests. Try another URL.";
       } else {
         errorMsg += `Failed to fetch headers: ${error.message}`;
       }
 
-      return await Aeonify.sendMessage(from, { text: errorMsg }, { quoted: message });
+      return Aeonify.sendMessage(jid, { text: errorMsg }, { quoted: message });
     }
   },
 };

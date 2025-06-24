@@ -14,17 +14,20 @@ const config = {
   ownerName: process.env.OWNER_NAME || "Aeon",
   prefix: process.env.PREFIX || "!",
 
-
   sessionId: process.env.SESSION_ID || "",
   auth: "qr",
   PORT: process.env.PORT || 3000,
 
-  defaultCooldown: parseInt(process.env.DEFAULT_COOLDOWN || "2000", 10),
-  allowSelfCommand: process.env.ALLOW_SELF_COMMAND !== "undefined" ? process.env.ALLOW_SELF_COMMAND === "true" : true,
-  cooldownBypassForOwner: process.env.COOLDOWN_BYPASS_FOR_OWNER !== "undefined" ? process.env.COOLDOWN_BYPASS_FOR_OWNER === "true" : true,
-
   openWeatherApiKey: process.env.OPEN_WEATHER_API_KEY || "8bc2f9d5ae85d87a5daa6cbdfb60092f",
   apiBaseUrl: process.env.API_BASE_URL || "https://aeonsan.xyz/api",
+
+  ownerGithubUrl: "https://github.com/Aeon-San",
+  githubUrl: "https://github.com/Aeon-San/Aeonify",
+
+  defaultCooldown: 2000,
+  allowSelfCommand: true,
+  cooldownBypassForOwner: true,
+
 };
 
 export default config;

@@ -7,7 +7,6 @@ import BotMode from './models/botmode.model.js';
 import Role from './models/role.model.js';
 import AFK from './models/afk.model.js';
 import UserBan from './models/userBan.model.js';
-import { startStatusUpdater } from './functions/status.js';
 import PermissionManager from './utils/permissionManager.js';
 import { extractTargetUserUniversal } from './utils/target.js';
 

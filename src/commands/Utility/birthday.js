@@ -1,5 +1,5 @@
 import Birthday from '../../models/birthday.model.js';
-import config from '../../config.js';
+import { extractTargetUserUniversal } from '../../utils/target.js';
 
 const birthdayCommand = {
   name: "birthday",
@@ -447,12 +447,13 @@ const birthdayCommand = {
         }
 
         case 'wish': {
-          const targetId = args[1];
-          if (!targetId) {
-            return reply("*Please mention someone to wish!*");
+          // Use universal extraction utility
+          const { targetJid } = extractTargetUserUniversal({ m: message, args: args.slice(1), message });
+          if (!targetJid) {
+            return reply("*Please mention someone to wish!* (use @user, reply, or number)");
           }
 
-          const birthday = await Birthday.findOne({ sessionId, userId: targetId });
+          const birthday = await Birthday.findOne({ sessionId, userId: targetJid });
           if (!birthday) {
             return reply("*This user hasn't set their birthday yet!*");
           }
