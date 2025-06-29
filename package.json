@@ -1,7 +1,7 @@
 {
   "name": "aeonify",
   "version": "1.0.0",
-  "description": "",
+  "description": "Aeonify is a modern, feature-rich WhatsApp bot built with Baileys library and Node.js. It's designed to provide comprehensive group management, AI integration, and entertainment features for WhatsApp groups.",
   "license": "MIT",
   "author": "Aeon",
   "type": "module",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "axios": "^1.9.0",
-    "baileys": "^6.7.17",
+    "baileys": "^6.7.18",
     "chalk": "^5.4.1",
     "cheerio": "^1.1.0",
     "discord-economy-super": "^1.7.7",
