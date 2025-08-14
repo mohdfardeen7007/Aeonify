@@ -12,7 +12,7 @@ const config = {
   botName: process.env.BOT_NAME || "𝐅𝖾ᥣ𝗂𝗑",
   ownerNumber: process.env.OWNER_NUMBERS ? process.env.OWNER_NUMBERS.split(",") : ['918127875972'],
   ownerName: process.env.OWNER_NAME || "𝐅𝖾ᥣ𝗂𝗑",
-  prefix: process.env.PREFIX || "!",
+  prefix: process.env.PREFIX || ".",
 
   sessionId: process.env.SESSION_ID || "",
   auth: "qr",
